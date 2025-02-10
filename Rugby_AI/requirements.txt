@@ -1,4 +1,4 @@
-azure-ai-language==1.0.0b6
+azure-ai-language==1.0.0
 azure-core==1.24.0
 python-dotenv==0.21.0
 streamlit==1.15.2

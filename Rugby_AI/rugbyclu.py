@@ -23,7 +23,7 @@ def main():
 
             # Consultar el modelo de Azure AI
             cls_project = 'RugbyConversacion'
-            deployment_slot = 'production'
+            deployment_slot = 'rugbyCLU'
             
             with client:
                 result = client.analyze_conversation(
@@ -48,24 +48,56 @@ def main():
                 )
             
             top_intent = result["result"]["prediction"]["topIntent"]
+            confidence = result["result"]["prediction"]["intents"][0]["confidenceScore"]
+            intents = result["result"]["prediction"]["intents"]
             entities = result["result"]["prediction"]["entities"]
             
-            print("\n🔹 Intent Detectado: {}".format(top_intent))
-            print("🔸 Confianza: {}".format(result["result"]["prediction"]["intents"][0]["confidenceScore"]))
+            # Construir JSON de salida
+            response_json = {
+                "query": userText,
+                "prediction": {
+                    "topIntent": top_intent,
+                    "projectKind": "Conversation",
+                    "intents": [
+                        {
+                            "category": intent["category"],
+                            "confidenceScore": intent["confidenceScore"]
+                        } for intent in intents
+                    ],
+                    "entities": [
+                        {
+                            "category": entity["category"],
+                            "text": entity["text"],
+                            "confidenceScore": entity["confidenceScore"]
+                        } for entity in entities
+                    ]
+                }
+            }
+
+            # Imprimir JSON formateado
+            print("\n📜 **Respuesta en JSON:**\n")
+            print(json.dumps(response_json, indent=4, ensure_ascii=False))
 
             if entities:
-                print("🔹 Entidades Detectadas:")
+                print("\U0001F4A1 Entidades Detectadas:")
                 for entity in entities:
                     print("  - {}: {} (Confianza: {})".format(entity["category"], entity["text"], entity["confidenceScore"]))
 
             # Ejecutar lógica según el intent detectado
-            if top_intent == 'Clasificacion al Mundial': #cambiar el nombr
+            if top_intent == 'Clasificacion al Mundial':
                 print(get_qualification_info())
-            elif top_intent == 'Ciudades Anfitrionas': # cambiar el nombre 
-                city = get_entity_value(entities, 'Ciudades Anfitrionas')
+            elif top_intent == 'Ciudades Anfitrionas':
+                city = get_entity_value(entities, 'Ciudad')
+                city = normalize_city_name(city)
                 print(get_host_city_info(city))
+            elif top_intent == 'Turismo en la Mundial':
+                city = get_entity_value(entities, 'Ciudad')
+                city = normalize_city_name(city)
+                print(get_tourism_info(city))
+            elif top_intent == 'Equipos Paticipantes':
+                print(get_news())
             else:
-                print("No tengo información sobre eso. Intenta preguntar sobre la clasificación o las ciudades sede del torneo.")
+                print("No tengo información sobre eso. Intenta preguntar sobre la clasificación, ciudades, turismo o noticias del torneo.")
     
     except Exception as ex:
         print("Error:", ex)
@@ -88,11 +120,54 @@ def get_host_city_info(city):
     return city_info.get(city, "No tengo información sobre esa ciudad sede.")
 
 
+def get_tourism_info(city):
+    tourism_info = {
+        "Sídney": "Visita la Ópera de Sídney y la playa Bondi.",
+        "Melbourne": "Explora la Great Ocean Road y el barrio Fitzroy.",
+        "Brisbane": "Descubre South Bank y el santuario de koalas Lone Pine.",
+        "Perth": "Disfruta de la Isla Rottnest y el Kings Park.",
+        "Adelaide": "Conoce el valle de Barossa y el Mercado Central de Adelaide.",
+        "Canberra": "Explora el Parlamento y el Lago Burley Griffin.",
+        "Newcastle": "Relájate en las playas y visita el fuerte Scratchley."
+    }
+    return tourism_info.get(city, "No tengo información turística sobre esta ciudad.")
+
+
+def get_team_info(entities):
+    if not entities:
+        return "No tengo información específica sobre equipos. Pregunta por un equipo en particular."
+    
+    team = get_entity_value(entities, 'equipos de rugby')
+    return f"Información sobre {team}: Próximos partidos y desempeño en el torneo  https://www.rugbyworldcup.com/2027/."
+
+def get_news():
+    return "https://www.rugbyworldcup.com/2027/es/news"
+
+
 def get_entity_value(entities, category):
     for entity in entities:
         if entity["category"] == category:
             return entity["text"]
     return None
+
+def normalize_city_name(city):
+    """
+    Normaliza nombres de ciudades corrigiendo errores comunes en la entrada del usuario.
+    """
+    if not  city:
+        return None
+    
+    city_variants = {
+        "sydney": "Sídney",
+        "melbourne": "Melbourne",
+        "brisbane": "Brisbane",
+        "perth": "Perth",
+        "adelaide": "Adelaide",
+        "canberra": "Canberra",
+        "newcastle": "Newcastle",
+        "pertth": "Perth"  # Corrige errores tipográficos comunes
+    }
+    return city_variants.get(city.lower(), city)
 
 if __name__ == "__main__":
     main()

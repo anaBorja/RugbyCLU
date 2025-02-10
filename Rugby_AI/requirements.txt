@@ -1,0 +1,5 @@
+streamlit
+requests
+azure-ai-textanalytics
+python-dotenv  # Si aún usas dotenv para cargar variables
+

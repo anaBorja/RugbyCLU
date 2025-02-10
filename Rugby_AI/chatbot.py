@@ -8,8 +8,8 @@ from rugbyclu import get_tourism_info, get_qualification_info, get_host_city_inf
 
 # Cargar variables de entorno
 load_dotenv()
-ls_prediction_endpoint = st.secrets["LS_CONVERSATIONS_ENDPOINT"]
-ls_prediction_key = st.secrets["LS_CONVERSATIONS_KEY"]
+ls_prediction_endpoint = os.getenv('LS_CONVERSATIONS_ENDPOINT')
+ls_prediction_key = os.getenv('LS_CONVERSATIONS_KEY')
 
 # Crear cliente de Azure Language Service
 client = ConversationAnalysisClient(
